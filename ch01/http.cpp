@@ -11,6 +11,7 @@
 #include <sys/types.h>
 #include <iostream>
 #include <regex>
+#include "base64.h"
 #ifdef WIN32
 #include <winsock2.h>
 #include <windows.h>
@@ -57,6 +58,12 @@ int http_get(int connection, string path, string host, string proxy_host, string
   if(send(connection, get_command, strlen(get_command), 0) == -1) return -1;
   sprintf(get_command, "Host: %s\r\n", host.c_str());
   if(send(connection, get_command, strlen(get_command), 0) == -1) return -1;
+
+  if (proxy_user != "") {
+    sprintf(get_command, "Proxy-Authorization: BASIC %s\r\n", base64_encode(proxy_user + ":" + proxy_passwd).c_str());
+    if(send(connection, get_command, strlen(get_command), 0) == -1) return -1;
+  }
+
   sprintf(get_command, "Connection: close\r\n\r\n");
   if(send(connection, get_command, strlen(get_command), 0) == -1) return -1;
   return 0;
