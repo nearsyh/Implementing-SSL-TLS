@@ -44,7 +44,7 @@ string base64_decode(string input) {
   assert(!(input.length() & 0x03));
   string ret = "";
   for(int i = 0; i < input.length(); i ++) {
-    if(static_cast<int>(input[i]) > 128 || unbase64[input[i]] == -1) {
+    if(static_cast<int>(input[i]) > 128 || unbase64[static_cast<int>(input[i])] == -1) {
       cerr << "Invalid base64 input" << endl;
       return "";
     }
