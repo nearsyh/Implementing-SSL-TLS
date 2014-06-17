@@ -10,6 +10,7 @@
 #include <cstring>
 #include <sys/types.h>
 #include <iostream>
+#include <regex>
 #ifdef WIN32
 #include <winsock2.h>
 #include <windows.h>
@@ -24,29 +25,24 @@ using namespace std;
 /*
  * Accept a uri. Retrive the host and the path
  */
-int parse_url(char *uri, char **host, char **path) {
-  if(!uri) return -1;
-
-  char *pos = strstr(uri, "//");
-  if(!pos) return -1;
-
-  *host = pos + 2;
-
-  pos = strchr(*host, '/');
-  if(!pos) *path = (char*)"";
-  else {
-    *pos = '\0';
-    *path = pos + 1;
-  }
-
+int parse_url(string uri, string& host, string& path) {
+  smatch m;
+  if(!regex_match(uri, m, std::regex("(http://)?([^/]*)(/(.*))?"))) return -1;
+  host = m[2].str();
+  path = m[4].str();
   return 0;
 }
 
 /*
  * Parse the proxy url and get host, username, password and port
  */
-int parse_proxy(const char* proxy, char **host, char **username, char **password, int *port) {
-  // TODO : Read regex to find out how to get these information
+int parse_proxy(string proxy, string& host, string username, string& password, int& port) {
+  smatch m;
+  if(!regex_match(proxy, m, std::regex("(http://)?(([^:]*)(:([^@]*))?@)?([^:]*)(:([0-9]*))?"))) return -1;
+  username = m[3].str();
+  password = m[5].str();
+  host = m[6].str();
+  port = m[8].str() == "" ? 80 : atoi(m[8].str().c_str());
   return 0;
 }
 
@@ -54,11 +50,12 @@ const int MAX_GET_COMMAND = 255;
 /**
  * HTTP get method
  */
-int http_get(int connection, const char *path, const char *host, const char *proxy_host, const char *proxy_user, const char *proxy_passwd) {
+int http_get(int connection, string path, string host, string proxy_host, string proxy_user, string proxy_passwd) {
   static char get_command[MAX_GET_COMMAND];
-  sprintf(get_command, "GET /%s HTTP/1.1\r\n", path);
+  if(proxy_host == "") sprintf(get_command, "GET /%s HTTP/1.1\r\n", path.c_str());
+  else sprintf(get_command, "GET http://%s/%s HTTP1.1\r\n", host.c_str(), path.c_str());
   if(send(connection, get_command, strlen(get_command), 0) == -1) return -1;
-  sprintf(get_command, "Host: %s\r\n", host);
+  sprintf(get_command, "Host: %s\r\n", host.c_str());
   if(send(connection, get_command, strlen(get_command), 0) == -1) return -1;
   sprintf(get_command, "Connection: close\r\n\r\n");
   if(send(connection, get_command, strlen(get_command), 0) == -1) return -1;
@@ -88,7 +85,7 @@ const int HTTP_PORT = 80;
 
 int main(int argc, char** argv) {
   int client_connection;
-  char *url, *proxy;
+  string url, proxy;
   struct hostent *host_name;
   struct sockaddr_in host_address;
   int index;
@@ -96,7 +93,7 @@ int main(int argc, char** argv) {
   WSDATA wsaData;
 #endif
 
-  url = proxy = nullptr;
+  url = proxy = "";
   index = 1;
   int ch;
   while((ch = getopt(argc, argv, "h:p:")) != -1) {
@@ -111,26 +108,26 @@ int main(int argc, char** argv) {
         usage(argv[0]);
     }
   }
-  if(!url) usage(argv[0]);
+  if(url == "") usage(argv[0]);
 
-  char *host, *path;
-  if(parse_url(url, &host, &path) == -1) {
+  string host, path;
+  if(parse_url(url, host, path) == -1) {
     cerr << "Error - malformed URL " << url << endl;
     return 1;
   }
 
-  char *proxy_host, *proxy_user, *proxy_password;
+  string proxy_host, proxy_user, proxy_password;
   int proxy_port;
-  if(proxy && parse_proxy(proxy, &proxy_host, &proxy_user, &proxy_password, &proxy_port) == -1) {
+  if(proxy != "" && parse_proxy(proxy, proxy_host, proxy_user, proxy_password, proxy_port) == -1) {
     cerr << "Error - malformed Proxy " << url << endl;
   }
 
-  if(proxy_host) {
+  if(proxy_host != "") {
     cout << "Connecting to host " << proxy_host << endl;
-    host_name = gethostbyname(proxy_host);
+    host_name = gethostbyname(proxy_host.c_str());
   } else {
     cout << "Connecting to host " << host << endl;
-    host_name = gethostbyname(host);
+    host_name = gethostbyname(host.c_str());
   }
 
   if(!host_name) {
@@ -139,7 +136,7 @@ int main(int argc, char** argv) {
   }
 
   host_address.sin_family = AF_INET;
-  host_address.sin_port = htons(proxy_host ? proxy_port : HTTP_PORT);
+  host_address.sin_port = htons(proxy_host != "" ? proxy_port : HTTP_PORT);
   memcpy(&host_address.sin_addr, host_name->h_addr_list[0], sizeof(in_addr));
 
 #ifdef WIN32
