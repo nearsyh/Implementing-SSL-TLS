@@ -13,7 +13,10 @@ const int PC1_KEY_SIZE = 7;
 const int SUBKEY_SIZE = 6;
 const int SBOX_BITS_SIZE = 6;
 
-void des_encrypt(const byte *plain, byte *cipher, int len, const byte *key, padding_scheme scheme);
-void des_decrypt(const byte *cipher, byte *plain, int len, const byte *key, padding_scheme scheme);
+void des_encrypt(const byte *plain, byte *cipher, int len, const byte *key, const byte *iv, padding_scheme scheme);
+void des3_encrypt(const byte *plain, byte *cipher, int len, const byte *key, const byte *iv, padding_scheme scheme);
+
+void des_decrypt(const byte *cipher, byte *plain, int len, const byte *key, const byte *iv, padding_scheme scheme);
+void des3_decrypt(const byte *cipher, byte *plain, int len, const byte *key, const byte *iv, padding_scheme scheme);
 
 #endif

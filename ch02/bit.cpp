@@ -40,16 +40,16 @@ void rotate_right(byte *target, int start_bit, int end_bit) {
   int carry = GET_BIT(target, end_bit), start_index = start_bit / 8, start_offset = start_bit % 8;
   int end_index = end_bit / 8, end_offset = end_bit % 8;
   if(start_index == end_index) {
-    for(int i = end_bit; i > start_bit; i ++)
+    for(int i = end_bit; i > start_bit; i --)
       if(GET_BIT(target, i - 1)) SET_BIT(target, i);
       else CLEAR_BIT(target, i);
   } else {
-    for(int i = end_offset; i >= 0; i ++)
+    for(int i = end_offset; i >= 0; i --)
       if(GET_BIT(target, end_bit - end_offset + i - 1)) SET_BIT(target, end_bit - end_offset + i);
       else CLEAR_BIT(target, end_bit - end_offset + i);
-    for(int i = end_index - 1; i > start_index; i ++)
+    for(int i = end_index - 1; i > start_index; i --)
       target[i] = (target[i] >> 1) | ((target[i - 1] & 0x01) << 7);
-    for(int i = 7 - start_offset; i > 0; i ++)
+    for(int i = 7 - start_offset; i > 0; i --)
       if(GET_BIT(target, start_bit + i - 1)) SET_BIT(target, start_bit + i);
       else CLEAR_BIT(target, start_bit + i);
   }
